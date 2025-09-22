@@ -1,7 +1,33 @@
 
 # launcher.py
 import os, runpy
+from contextlib import contextmanager
+
 import streamlit as st
+
+
+@contextmanager
+def _suppress_child_page_config():
+    """Prevent nested apps from crashing when they call st.set_page_config()."""
+
+    original = st.set_page_config
+
+    def _noop(*args, **kwargs):
+        # Record the most recent request for potential debugging/introspection.
+        cfg = {}
+        if args:
+            # Mirror Streamlit's positional arguments handling (title, icon, layout, sidebar).
+            names = ["page_title", "page_icon", "layout", "initial_sidebar_state", "menu_items"]
+            cfg.update({k: v for k, v in zip(names, args) if v is not None})
+        cfg.update(kwargs)
+        st.session_state["_launcher_last_page_config"] = cfg
+
+    try:
+        st.set_page_config = _noop  # type: ignore[assignment]
+        yield
+    finally:
+        st.set_page_config = original  # type: ignore[assignment]
+
 
 st.set_page_config(page_title="EC Suite — Launcher", layout="wide")
 st.title("EC Suite — Launcher")
@@ -29,4 +55,5 @@ target = os.path.join(BASE, apps[choice])
 if not os.path.exists(target):
     st.error(f"File not found: {target}")
 else:
-    runpy.run_path(target, run_name="__main__")
+    with _suppress_child_page_config():
+        runpy.run_path(target, run_name="__main__")
