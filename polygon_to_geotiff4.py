@@ -192,7 +192,15 @@ def _append_to_store(gdf_new: "gpd.GeoDataFrame", reset: bool = False):
         st.session_state["poly_store"] = S.set_crs("EPSG:4326", allow_override=True)
 
 def _clear_store():
-    st.session_state["poly_store"] = gpd.GeoDataFrame(columns=["name","label","class_id","geometry"], crs="EPSG:4326") if gpd else None
+    """Reset the polygon store to an empty GeoDataFrame when possible."""
+    if gpd is None:
+        st.session_state["poly_store"] = None
+        return
+
+    st.session_state["poly_store"] = gpd.GeoDataFrame(
+        columns=["name", "label", "class_id", "geometry"],
+        crs="EPSG:4326",
+    )
 
 
 # -------------------- UI: draw / import --------------------
